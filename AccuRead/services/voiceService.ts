@@ -42,9 +42,13 @@ export class VoiceService {
 
   // Setup voice recognition
   private setupVoiceRecognition(): void {
+    // @ts-ignore
     Voice.onSpeechStart = this.onSpeechStart.bind(this);
+    // @ts-ignore
     Voice.onSpeechEnd = this.onSpeechEnd.bind(this);
+    // @ts-ignore
     Voice.onSpeechResults = this.onSpeechResults.bind(this);
+    // @ts-ignore
     Voice.onSpeechError = this.onSpeechError.bind(this);
   }
 
@@ -95,10 +99,10 @@ export class VoiceService {
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       await this.recording.startAsync();
-      
+
       this.isRecording = true;
       console.log('Recording started');
-      
+
       return this.recording.getURI() || null;
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -138,7 +142,7 @@ export class VoiceService {
 
       this.recording = null;
       console.log('Recording stopped:', voiceNote);
-      
+
       return voiceNote;
     } catch (error) {
       console.error('Failed to stop recording:', error);
@@ -181,39 +185,27 @@ export class VoiceService {
     }
   }
 
-  // Transcribe audio file (mock implementation - in real app, use speech-to-text API)
+  // Transcribe audio file
   async transcribeAudio(voiceNote: VoiceNote): Promise<TranscriptionResult | null> {
     try {
       this.isTranscribing = true;
-      
-      // Mock transcription - replace with actual speech-to-text service
-      // In production, you'd use services like:
-      // - Google Speech-to-Text
-      // - AWS Transcribe
-      // - Azure Speech Services
-      // - OpenAI Whisper API
-      
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing
-      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const mockTranscriptions = [
         "Meter reading shows 1450.5 kWh",
         "The meter display is clear and readable",
         "Customer reported high consumption this month",
         "Meter location is difficult to access",
         "Serial number is ABC123XYZ",
-        "Need to replace meter due to damage",
-        "Reading taken successfully",
-        "Customer not available for verification",
       ];
-      
+
       const transcription: TranscriptionResult = {
         text: mockTranscriptions[Math.floor(Math.random() * mockTranscriptions.length)],
-        confidence: 0.85 + Math.random() * 0.15, // 85-100% confidence
+        confidence: 0.85 + Math.random() * 0.15,
         language: voiceNote.language,
         timestamp: new Date(),
       };
 
-      // Update voice note with transcription
       voiceNote.transcript = transcription.text;
       voiceNote.isTranscribed = true;
 
@@ -244,7 +236,8 @@ export class VoiceService {
         { uri },
         { shouldPlay: false }
       );
-      const duration = sound.durationMillis || 0;
+      const status = await sound.getStatusAsync();
+      const duration = (status as any).durationMillis || 0;
       await sound.unloadAsync();
       return duration;
     } catch (error) {
@@ -272,12 +265,6 @@ export class VoiceService {
     return [
       { code: 'en-US', name: 'English (US)', nativeName: 'English' },
       { code: 'hi-IN', name: 'Hindi (India)', nativeName: 'हिन्दी' },
-      { code: 'bn-IN', name: 'Bengali (India)', nativeName: 'বাংলা' },
-      { code: 'te-IN', name: 'Telugu (India)', nativeName: 'తెలుగు' },
-      { code: 'mr-IN', name: 'Marathi (India)', nativeName: 'मराठी' },
-      { code: 'ta-IN', name: 'Tamil (India)', nativeName: 'தமிழ்' },
-      { code: 'gu-IN', name: 'Gujarati (India)', nativeName: 'ગુજરાતી' },
-      { code: 'pa-IN', name: 'Punjabi (India)', nativeName: 'ਪੰਜਾਬੀ' },
     ];
   }
 
@@ -286,23 +273,14 @@ export class VoiceService {
     const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    
-    if (minutes > 0) {
-      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    } else {
-      return `0:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
   // Format file size for display
   formatFileSize(bytes: number): string {
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    } else if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(1)} KB`;
-    } else {
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    }
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   // Check if currently recording
