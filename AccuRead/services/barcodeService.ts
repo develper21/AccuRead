@@ -35,7 +35,7 @@ export class BarcodeService {
       if (Platform.OS === 'web') {
         return false; // Web doesn't support camera barcode scanning
       }
-      
+
       const status = await BarCodeScanner.getPermissionsAsync();
       return status.granted;
     } catch (error) {
@@ -100,14 +100,14 @@ export class BarcodeService {
     try {
       const urlObj = new URL(url);
       const params = new URLSearchParams(urlObj.search);
-      
+
       return {
-        serialNumber: params.get('serial') || params.get('id') || params.get('meter_id'),
-        meterType: params.get('type') || params.get('model'),
-        location: params.get('location') || params.get('address'),
-        customerName: params.get('customer') || params.get('name'),
-        installationDate: params.get('installed') || params.get('date'),
-        lastReading: params.get('lastReading') || params.get('previous'),
+        serialNumber: params.get('serial') || params.get('id') || params.get('meter_id') || undefined,
+        meterType: params.get('type') || params.get('model') || undefined,
+        location: params.get('location') || params.get('address') || undefined,
+        customerName: params.get('customer') || params.get('name') || undefined,
+        installationDate: params.get('installed') || params.get('date') || undefined,
+        lastReading: params.get('lastReading') || params.get('previous') || undefined,
       };
     } catch (error) {
       console.error('Failed to extract meter info from URL:', error);
@@ -207,11 +207,13 @@ export class BarcodeService {
   // Add scanned code to history
   addScannedCode(barcodeData: BarcodeData): void {
     this.scannedCodes.set(barcodeData.data, barcodeData);
-    
+
     // Keep only last 100 scanned codes
     if (this.scannedCodes.size > 100) {
       const oldestKey = this.scannedCodes.keys().next().value;
-      this.scannedCodes.delete(oldestKey);
+      if (oldestKey !== undefined) {
+        this.scannedCodes.delete(oldestKey);
+      }
     }
   }
 
