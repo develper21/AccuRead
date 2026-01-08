@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, ScrollView, Image} from 'react-native';
-import {MeterReadingResult, ConfidenceScores} from '../types';
-import {Theme} from '../utils/theme';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { MeterReadingResult } from '../types';
+import { Theme } from '../utils/theme';
 
 interface ResultCardProps {
   result: MeterReadingResult;
@@ -43,10 +43,10 @@ const ResultCard: React.FC<ResultCardProps> = ({
           <View
             style={[
               styles.confidenceDot,
-              {backgroundColor: getConfidenceColor(confidence)},
+              { backgroundColor: getConfidenceColor(confidence) },
             ]}
           />
-          <Text style={[styles.confidenceText, {color: getConfidenceColor(confidence)}]}>
+          <Text style={[styles.confidenceText, { color: getConfidenceColor(confidence) }]}>
             {confidence.toFixed(0)}%
           </Text>
         </View>
@@ -62,12 +62,12 @@ const ResultCard: React.FC<ResultCardProps> = ({
     <ScrollView style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title}>Meter Reading Results</Text>
-        
+
         {/* Image Preview */}
         <View style={styles.imagePreview}>
           <Text style={styles.imagePreviewText}>Captured Image</Text>
           {result.imageUrl ? (
-            <Image source={{uri: result.imageUrl}} style={styles.capturedImage} />
+            <Image source={{ uri: result.imageUrl }} style={styles.capturedImage} />
           ) : (
             <View style={styles.placeholderImage} />
           )}
