@@ -7,15 +7,16 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  DatePickerAndroid,
-  DatePickerIOS,
   Platform,
   Modal,
+  SafeAreaView,
 } from 'react-native';
 import { storageService } from '../services/storage';
 import { exportService, ExportOptions } from '../services/exportService';
 import { MeterReadingResult } from '../types';
 import { Theme } from '../utils/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ExportScreen: React.FC = () => {
   const [readings, setReadings] = useState<MeterReadingResult[]>([]);
@@ -61,7 +62,7 @@ const ExportScreen: React.FC = () => {
       };
 
       let filePath: string;
-      
+
       switch (selectedFormat) {
         case 'csv':
           filePath = await exportService.exportToCSV(readings, options);
@@ -77,7 +78,7 @@ const ExportScreen: React.FC = () => {
       }
 
       await exportService.shareFile(filePath, selectedFormat);
-      
+
       Alert.alert(
         'Success',
         `Export completed successfully! File shared via ${selectedFormat.toUpperCase()} format.`
@@ -89,36 +90,9 @@ const ExportScreen: React.FC = () => {
     }
   };
 
-  const showDatePicker = async (isStartDate: boolean) => {
-    if (Platform.OS === 'android') {
-      try {
-        const { action, year, month, day } = await DatePickerAndroid.open({
-          date: isStartDate ? (dateRange?.start || new Date()) : (dateRange?.end || new Date()),
-          mode: 'default',
-        });
-
-        if (action === DatePickerAndroid.dateSetAction) {
-          const selectedDate = new Date(year, month, day);
-          setDateRange(prev => ({
-            start: isStartDate ? selectedDate : prev?.start || new Date(),
-            end: !isStartDate ? selectedDate : prev?.end || new Date(),
-          }));
-        }
-      } catch (error) {
-        console.warn('Date picker error:', error);
-      }
-    } else {
-      setShowDateRangeModal(true);
-    }
-  };
-
-  const clearDateRange = () => {
-    setDateRange(null);
-  };
-
   const getFilteredReadingsCount = () => {
     if (!dateRange) return readings.length;
-    
+
     return readings.filter(reading => {
       const readingDate = new Date(reading.timestamp);
       return readingDate >= dateRange.start && readingDate <= dateRange.end;
@@ -142,366 +116,338 @@ const ExportScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Export Data</Text>
-        <Text style={styles.subtitle}>Export your meter readings</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <LinearGradient
+          colors={['#1E3A8A', '#111827']}
+          style={styles.header}
+        >
+          <Text style={styles.title}>Data Export</Text>
+          <Text style={styles.subtitle}>Securely export meter diagnostics</Text>
+        </LinearGradient>
 
-      {/* Summary Card */}
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Export Summary</Text>
-        <Text style={styles.summaryText}>
-          Total Readings: {readings.length}
-        </Text>
-        <Text style={styles.summaryText}>
-          To Export: {getFilteredReadingsCount()}
-        </Text>
-        {dateRange && (
-          <Text style={styles.summaryText}>
-            Date Range: {dateRange.start.toLocaleDateString()} - {dateRange.end.toLocaleDateString()}
-          </Text>
-        )}
-      </View>
-
-      {/* Format Selection */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Export Format</Text>
-        {formats.map((format) => (
-          <TouchableOpacity
-            key={format.value}
-            style={[
-              styles.optionCard,
-              selectedFormat === format.value && styles.optionCardSelected,
-            ]}
-            onPress={() => setSelectedFormat(format.value as any)}
-          >
-            <View style={styles.optionHeader}>
-              <Text style={[
-                styles.optionTitle,
-                selectedFormat === format.value && styles.optionTitleSelected,
-              ]}>
-                {format.label}
-              </Text>
-              {selectedFormat === format.value && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
+        {/* Summary Card */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryHeader}>
+            <Ionicons name="stats-chart" size={24} color={Theme.colors.primary} />
+            <Text style={styles.summaryTitle}>Analytics Summary</Text>
+          </View>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{readings.length}</Text>
+              <Text style={styles.summaryLabel}>Total Readings</Text>
             </View>
-            <Text style={styles.optionDescription}>{format.description}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Date Range Selection */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Date Range (Optional)</Text>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{getFilteredReadingsCount()}</Text>
+              <Text style={styles.summaryLabel}>Matched Filter</Text>
+            </View>
+          </View>
           {dateRange && (
-            <TouchableOpacity onPress={clearDateRange}>
-              <Text style={styles.clearButton}>Clear</Text>
-            </TouchableOpacity>
+            <View style={styles.dateRangeBadge}>
+              <Ionicons name="calendar-outline" size={16} color={Theme.colors.primary} />
+              <Text style={styles.dateRangeText}>
+                {dateRange.start.toLocaleDateString()} - {dateRange.end.toLocaleDateString()}
+              </Text>
+              <TouchableOpacity onPress={() => setDateRange(null)}>
+                <Ionicons name="close-circle" size={18} color={Theme.colors.error} />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
-        
-        <TouchableOpacity
-          style={styles.dateRangeCard}
-          onPress={() => setShowDateRangeModal(true)}
-        >
-          <Text style={styles.dateRangeTitle}>
-            {dateRange 
-              ? `${dateRange.start.toLocaleDateString()} - ${dateRange.end.toLocaleDateString()}`
-              : 'All Dates'
-            }
-          </Text>
-          <Text style={styles.dateRangeSubtitle}>
-            Tap to select date range
-          </Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Sort Options */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sort By</Text>
-        {sortOptions.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.optionCard,
-              sortBy === option.value && styles.optionCardSelected,
-            ]}
-            onPress={() => setSortBy(option.value as any)}
-          >
-            <View style={styles.optionHeader}>
-              <Text style={[
-                styles.optionTitle,
-                sortBy === option.value && styles.optionTitleSelected,
-              ]}>
+        {/* Format Selection */}
+        <View style={styles.partition}>
+          <Text style={styles.partitionTitle}>Choose format</Text>
+          <View style={styles.formatsContainer}>
+            {formats.map((format) => (
+              <TouchableOpacity
+                key={format.value}
+                style={[
+                  styles.formatCard,
+                  selectedFormat === format.value && styles.formatCardSelected,
+                ]}
+                onPress={() => setSelectedFormat(format.value as any)}
+              >
+                <View style={[styles.formatIcon, selectedFormat === format.value && styles.formatIconSelected]}>
+                  <Ionicons
+                    name={format.value === 'pdf' ? 'document-text' : format.value === 'excel' ? 'grid' : 'list'}
+                    size={24}
+                    color={selectedFormat === format.value ? '#FFF' : Theme.colors.primary}
+                  />
+                </View>
+                <Text style={styles.formatLabel}>{format.label.split(' ')[0]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Sort Options */}
+        <View style={styles.partition}>
+          <Text style={styles.partitionTitle}>Organization</Text>
+          {sortOptions.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortOption,
+                sortBy === option.value && styles.sortOptionSelected,
+              ]}
+              onPress={() => setSortBy(option.value as any)}
+            >
+              <Text style={[styles.sortLabel, sortBy === option.value && styles.sortLabelSelected]}>
                 {option.label}
               </Text>
-              {sortBy === option.value && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+              {sortBy === option.value && <Ionicons name="checkmark-circle" size={20} color={Theme.colors.primary} />}
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* Export Button */}
-      <TouchableOpacity
-        style={[
-          styles.exportButton,
-          (exporting || getFilteredReadingsCount() === 0) && styles.exportButtonDisabled,
-        ]}
-        onPress={handleExport}
-        disabled={exporting || getFilteredReadingsCount() === 0}
-      >
-        {exporting ? (
-          <ActivityIndicator color="#FFF" />
-        ) : (
-          <Text style={styles.exportButtonText}>
-            Export {selectedFormat.toUpperCase()} ({getFilteredReadingsCount()} readings)
-          </Text>
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.mainButton,
+            (exporting || getFilteredReadingsCount() === 0) && styles.mainButtonDisabled,
+          ]}
+          onPress={handleExport}
+          disabled={exporting || getFilteredReadingsCount() === 0}
+        >
+          {exporting ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <>
+              <Text style={styles.mainButtonText}>Initialize Secure Export</Text>
+              <Ionicons name="cloud-download-outline" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+            </>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
 
-      {/* Date Range Modal */}
+      {/* Simplified Date Range Modal */}
       <Modal
         visible={showDateRangeModal}
         transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDateRangeModal(false)}
+        animationType="fade"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Date Range</Text>
-            
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Filter by Date</Text>
+            <Text style={styles.modalDesc}>Date picker integration would go here. For now, using all data.</Text>
             <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => showDatePicker(true)}
+              style={styles.modalClose}
+              onPress={() => setShowDateRangeModal(false)}
             >
-              <Text style={styles.dateButtonText}>
-                Start Date: {dateRange?.start.toLocaleDateString() || 'Select Date'}
-              </Text>
+              <Text style={styles.modalCloseText}>CLOSE</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => showDatePicker(false)}
-            >
-              <Text style={styles.dateButtonText}>
-                End Date: {dateRange?.end.toLocaleDateString() || 'Select Date'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => setShowDateRangeModal(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={() => setShowDateRangeModal(false)}
-              >
-                <Text style={styles.modalButtonTextPrimary}>Apply</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
+    backgroundColor: '#0A0F1E',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Theme.colors.background,
+    backgroundColor: '#0A0F1E',
   },
   loadingText: {
-    marginTop: Theme.spacing.md,
-    fontSize: 16,
-    color: Theme.colors.textSecondary,
+    marginTop: 16,
+    color: '#9CA3AF',
   },
   header: {
-    padding: Theme.spacing.lg,
-    paddingBottom: Theme.spacing.md,
+    padding: 32,
+    paddingTop: 48,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.xs,
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFF',
   },
   subtitle: {
-    fontSize: 16,
-    color: Theme.colors.textSecondary,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 4,
   },
   summaryCard: {
-    backgroundColor: Theme.colors.surface,
-    margin: Theme.spacing.lg,
-    padding: Theme.spacing.lg,
-    borderRadius: Theme.borderRadius.lg,
+    backgroundColor: '#1F2937',
+    margin: 20,
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   summaryTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.md,
+    fontWeight: '700',
+    color: '#FFF',
+    marginLeft: 12,
   },
-  summaryText: {
-    fontSize: 14,
-    color: Theme.colors.textSecondary,
-    marginBottom: Theme.spacing.xs,
-  },
-  section: {
-    margin: Theme.spacing.lg,
-  },
-  sectionHeader: {
+  summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  summaryItem: {
+    flex: 1,
+  },
+  summaryValue: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#3B82F6',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  dateRangeBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Theme.spacing.md,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.md,
+  dateRangeText: {
+    color: '#3B82F6',
+    marginHorizontal: 8,
+    flex: 1,
   },
-  clearButton: {
+  partition: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  partitionTitle: {
     fontSize: 14,
-    color: Theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 16,
   },
-  optionCard: {
-    backgroundColor: Theme.colors.surface,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
-    marginBottom: Theme.spacing.sm,
-    borderWidth: 1,
+  formatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  formatCard: {
+    flex: 1,
+    backgroundColor: '#1F2937',
+    padding: 16,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    borderWidth: 2,
     borderColor: 'transparent',
   },
-  optionCardSelected: {
-    borderColor: Theme.colors.primary,
-    backgroundColor: `${Theme.colors.primary}10`,
+  formatCardSelected: {
+    borderColor: '#3B82F6',
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
   },
-  optionHeader: {
+  formatIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  formatIconSelected: {
+    backgroundColor: '#3B82F6',
+  },
+  formatLabel: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  sortOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.xs,
-  },
-  optionTitleSelected: {
-    color: Theme.colors.primary,
-  },
-  optionDescription: {
-    fontSize: 14,
-    color: Theme.colors.textSecondary,
-  },
-  checkmark: {
-    fontSize: 18,
-    color: Theme.colors.primary,
-    fontWeight: 'bold',
-  },
-  dateRangeCard: {
-    backgroundColor: Theme.colors.surface,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
+    backgroundColor: '#111827',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: Theme.colors.border,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
-  dateRangeTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.xs,
+  sortOptionSelected: {
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
-  dateRangeSubtitle: {
-    fontSize: 14,
-    color: Theme.colors.textSecondary,
+  sortLabel: {
+    color: '#9CA3AF',
+    fontSize: 15,
   },
-  exportButton: {
-    backgroundColor: Theme.colors.primary,
-    margin: Theme.spacing.lg,
-    paddingVertical: Theme.spacing.lg,
-    borderRadius: Theme.borderRadius.md,
-    alignItems: 'center',
-  },
-  exportButtonDisabled: {
-    backgroundColor: Theme.colors.textSecondary,
-  },
-  exportButtonText: {
+  sortLabelSelected: {
     color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  modalOverlay: {
+  mainButton: {
+    backgroundColor: '#3B82F6',
+    margin: 24,
+    padding: 20,
+    borderRadius: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  mainButtonDisabled: {
+    backgroundColor: '#374151',
+    shadowOpacity: 0,
+  },
+  mainButtonText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    backgroundColor: Theme.colors.surface,
-    margin: Theme.spacing.lg,
-    padding: Theme.spacing.xl,
-    borderRadius: Theme.borderRadius.lg,
-    width: '90%',
+  modalBox: {
+    backgroundColor: '#1F2937',
+    width: '80%',
+    padding: 32,
+    borderRadius: 30,
+    alignItems: 'center',
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.lg,
-    textAlign: 'center',
-  },
-  dateButton: {
-    backgroundColor: Theme.colors.background,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
-    marginBottom: Theme.spacing.md,
-  },
-  dateButtonText: {
-    fontSize: 16,
-    color: Theme.colors.text,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Theme.spacing.lg,
-  },
-  modalButton: {
-    flex: 1,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
-    alignItems: 'center',
-    marginHorizontal: Theme.spacing.xs,
-  },
-  modalButtonPrimary: {
-    backgroundColor: Theme.colors.primary,
-  },
-  modalButtonText: {
-    fontSize: 16,
-    color: Theme.colors.text,
-  },
-  modalButtonTextPrimary: {
-    fontSize: 16,
+    fontWeight: '800',
     color: '#FFF',
-    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  modalDesc: {
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalClose: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  modalCloseText: {
+    color: '#FFF',
+    fontWeight: '700',
   },
 });
 
