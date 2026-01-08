@@ -9,6 +9,8 @@ export interface CloudStorageConfig {
   accessKey?: string;
   secretKey?: string;
   endpoint?: string;
+  account?: string;
+  container?: string;
 }
 
 export interface UploadProgress {
@@ -29,18 +31,18 @@ export interface CloudFile {
 
 export abstract class CloudStorageProvider {
   abstract uploadFile(
-    filePath: string, 
-    fileName: string, 
+    filePath: string,
+    fileName: string,
     contentType: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<string>;
-  
+
   abstract downloadFile(fileId: string): Promise<string>;
-  
+
   abstract deleteFile(fileId: string): Promise<boolean>;
-  
+
   abstract listFiles(prefix?: string): Promise<CloudFile[]>;
-  
+
   abstract getSignedUrl(fileId: string, expiresIn?: number): Promise<string>;
 }
 
@@ -54,25 +56,25 @@ export class AWSStorageProvider extends CloudStorageProvider {
   }
 
   async uploadFile(
-    filePath: string, 
-    fileName: string, 
+    filePath: string,
+    fileName: string,
     contentType: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<string> {
     try {
       // Mock AWS S3 upload - replace with actual AWS SDK
       console.log(`Uploading ${fileName} to AWS S3`);
-      
+
       // Simulate upload progress
       const fileSize = (await RNFS.stat(filePath)).size;
       let uploaded = 0;
       const chunkSize = fileSize / 10;
-      
+
       for (let i = 0; i < 10; i++) {
         await new Promise(resolve => setTimeout(resolve, 200));
         uploaded += chunkSize;
         const percentage = Math.round((uploaded / fileSize) * 100);
-        
+
         if (onProgress) {
           onProgress({
             bytesWritten: Math.min(uploaded, fileSize),
@@ -122,24 +124,24 @@ export class AzureStorageProvider extends CloudStorageProvider {
   }
 
   async uploadFile(
-    filePath: string, 
-    fileName: string, 
+    filePath: string,
+    fileName: string,
     contentType: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<string> {
     try {
       // Mock Azure upload - replace with actual Azure SDK
       console.log(`Uploading ${fileName} to Azure Blob Storage`);
-      
+
       const fileSize = (await RNFS.stat(filePath)).size;
       let uploaded = 0;
       const chunkSize = fileSize / 10;
-      
+
       for (let i = 0; i < 10; i++) {
         await new Promise(resolve => setTimeout(resolve, 200));
         uploaded += chunkSize;
         const percentage = Math.round((uploaded / fileSize) * 100);
-        
+
         if (onProgress) {
           onProgress({
             bytesWritten: Math.min(uploaded, fileSize),
@@ -190,7 +192,7 @@ export class CloudStorageService {
   // Initialize cloud storage with provider
   initialize(config: CloudStorageConfig): void {
     this.config = config;
-    
+
     switch (config.provider) {
       case 'aws':
         this.provider = new AWSStorageProvider(config);
@@ -208,7 +210,7 @@ export class CloudStorageService {
 
   // Upload meter reading image
   async uploadMeterImage(
-    imagePath: string, 
+    imagePath: string,
     meterSerial: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<string> {
@@ -235,7 +237,7 @@ export class CloudStorageService {
 
   // Upload export file
   async uploadExportFile(
-    filePath: string, 
+    filePath: string,
     exportType: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<string> {
@@ -347,7 +349,7 @@ export class CloudStorageService {
 
       const files = await this.provider.listFiles();
       const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-      const lastSync = files.length > 0 
+      const lastSync = files.length > 0
         ? new Date(Math.max(...files.map(f => f.uploadedAt.getTime())))
         : null;
 
