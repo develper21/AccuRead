@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 const Theme = {
   colors: {
@@ -8,6 +8,8 @@ const Theme = {
     success: '#10B981',      // Green
     background: '#111827',   // Dark Gray
     surface: '#1F2937',      // Lighter Gray
+    card: '#2D3748',         // Card Background
+    border: '#374151',       // Border color
     text: '#F9FAFB',         // White
     textSecondary: '#9CA3AF', // Gray
     error: '#EF4444',        // Red
@@ -81,4 +83,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export {Theme, styles};
+export { Theme, styles };
