@@ -9,3 +9,4 @@ paddleocr==2.7.0.3
 python-dotenv==1.0.0
 pydantic==2.5.0
 aiofiles==23.2.1
+redis==5.0.1
