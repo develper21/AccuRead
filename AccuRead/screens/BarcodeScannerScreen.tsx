@@ -8,18 +8,20 @@ import {
   Vibration,
   Linking,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
 import { barcodeService, BarcodeData, MeterInfo } from '../services/barcodeService';
 import { useNavigation } from '@react-navigation/native';
 import { Theme } from '../utils/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const BarcodeScannerScreen: React.FC = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
-  const [torchOn, setTorchOn] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
 
   useEffect(() => {
     requestCameraPermission();
@@ -28,18 +30,18 @@ const BarcodeScannerScreen: React.FC = () => {
   const requestCameraPermission = async () => {
     const hasPermission = await barcodeService.requestBarcodePermission();
     setHasPermission(hasPermission);
-    
+
     if (!hasPermission) {
       Alert.alert(
-        'Camera Permission Required',
-        'Camera permission is required to scan barcodes. Please enable camera permissions in settings.',
+        'Protocol Required',
+        'Camera access is essential for meter identification. Enable in settings?',
         [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Settings', 
-            onPress: () => Platform.OS === 'ios' 
-              ? Linking.openURL('app-settings:') 
-              : Linking.openSettings() 
+          { text: 'Later', style: 'cancel' },
+          {
+            text: 'System Settings',
+            onPress: () => Platform.OS === 'ios'
+              ? Linking.openURL('app-settings:')
+              : Linking.openSettings()
           }
         ]
       );
@@ -49,13 +51,12 @@ const BarcodeScannerScreen: React.FC = () => {
   const handleBarCodeScanned = useCallback(async ({ type, data }: BarCodeScannerResult) => {
     if (scanned) return;
 
-    // Check if recently scanned to prevent duplicates
     if (barcodeService.isRecentlyScanned(data)) {
       return;
     }
 
     setScanned(true);
-    Vibration.vibrate(100); // Short vibration feedback
+    Vibration.vibrate(100);
 
     try {
       const barcodeData: BarcodeData = {
@@ -65,177 +66,108 @@ const BarcodeScannerScreen: React.FC = () => {
         format: type,
       };
 
-      // Add to scanning history
       barcodeService.addScannedCode(barcodeData);
-
-      // Parse meter information
       const meterInfo = barcodeService.parseBarcodeData(data);
 
       if (meterInfo) {
-        // Validate serial number if present
         if (meterInfo.serialNumber && !barcodeService.validateMeterSerial(meterInfo.serialNumber)) {
           Alert.alert(
-            'Invalid Serial Number',
-            'The scanned serial number appears to be invalid. Please check the barcode and try again.',
-            [{ text: 'OK', onPress: () => setScanned(false) }]
+            'Checksum Error',
+            'Numerical sequence mismatch. Verify meter label.',
+            [{ text: 'Retry', onPress: () => setScanned(false) }]
           );
           return;
         }
 
-        // Show success and navigate
         Alert.alert(
-          'Meter Information Found',
-          `Serial: ${meterInfo.serialNumber || 'Unknown'}\nType: ${meterInfo.meterType || 'Unknown'}\nLocation: ${meterInfo.location || 'Unknown'}`,
+          'Identification Successful',
+          `Serial: ${meterInfo.serialNumber || 'N/A'}\nModel: ${meterInfo.meterType || 'Generic'}`,
           [
-            { text: 'Scan Again', onPress: () => setScanned(false) },
-            { 
-              text: 'Use This Meter', 
+            { text: 'Discard', style: 'destructive', onPress: () => setScanned(false) },
+            {
+              text: 'Initialize Analysis',
               onPress: () => {
-                // Navigate back to camera screen with meter info
-                navigation.navigate('Camera', { meterInfo });
+                navigation.navigate('Home', { meterInfo });
               }
             }
           ]
         );
       } else {
-        // Could not parse meter info
         Alert.alert(
-          'Unrecognized Barcode',
-          'This barcode does not contain meter information or the format is not supported.',
+          'Manual Entry Required',
+          'Data block format unrecognized.',
           [
-            { text: 'Scan Again', onPress: () => setScanned(false) },
-            { text: 'Use Serial Only', onPress: () => {
-              const basicInfo: MeterInfo = { serialNumber: data };
-              navigation.navigate('Camera', { meterInfo: basicInfo });
-            }}
+            { text: 'Retry Search', onPress: () => setScanned(false) },
+            {
+              text: 'Map Serial Only', onPress: () => {
+                const basicInfo: MeterInfo = { serialNumber: data };
+                navigation.navigate('Home', { meterInfo: basicInfo });
+              }
+            }
           ]
         );
       }
     } catch (error) {
-      console.error('Barcode scanning error:', error);
-      Alert.alert(
-        'Scanning Error',
-        'An error occurred while processing the barcode. Please try again.',
-        [{ text: 'OK', onPress: () => setScanned(false) }]
-      );
+      setScanned(false);
     }
   }, [scanned, navigation]);
 
-  const toggleTorch = () => {
-    setTorchOn(!torchOn);
-  };
-
-  const showBarcodeHelp = () => {
-    barcodeService.showBarcodeHelp();
-  };
-
-  const getSupportedTypes = () => {
-    return barcodeService.getSupportedBarcodeTypes().map(type => type.name).join(', ');
-  };
-
-  if (hasPermission === null) {
+  if (hasPermission === null || hasPermission === false) {
     return (
       <View style={styles.container}>
-        <Text style={styles.message}>Requesting camera permission...</Text>
-      </View>
-    );
-  }
-
-  if (hasPermission === false) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>No access to camera</Text>
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={requestCameraPermission}
-        >
-          <Text style={styles.buttonText}>Grant Permission</Text>
-        </TouchableOpacity>
+        <Text style={styles.message}>
+          {hasPermission === null ? 'Initializing optical sensors...' : 'Sensor access denied.'}
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <BarCodeScanner
         onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
         style={StyleSheet.absoluteFillObject}
-        barCodeTypes={[
-          BarCodeScanner.Constants.BarCodeType.qr,
-          BarCodeScanner.Constants.BarCodeType.aztec,
-          BarCodeScanner.Constants.BarCodeType.pdf417,
-          BarCodeScanner.Constants.BarCodeType.code128,
-          BarCodeScanner.Constants.BarCodeType.code39,
-          BarCodeScanner.Constants.BarCodeType.ean13,
-          BarCodeScanner.Constants.BarCodeType.ean8,
-        ]}
-        torchEnabled={torchOn}
       />
 
-      {/* Scanner overlay */}
       <View style={styles.overlay}>
-        {/* Top overlay */}
-        <View style={styles.topOverlay}>
-          <Text style={styles.title}>Scan Meter Barcode</Text>
-          <Text style={styles.subtitle}>
-            Position barcode within the frame
-          </Text>
-        </View>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.8)', 'transparent']}
+          style={styles.topSection}
+        >
+          <Text style={styles.title}>Scan Identifier</Text>
+          <Text style={styles.subtitle}>Compatible with QR, Aztec, and Linear codes</Text>
+        </LinearGradient>
 
-        {/* Scanning frame */}
-        <View style={styles.scanningFrame}>
+        <View style={styles.focusFrame}>
           <View style={[styles.corner, styles.topLeft]} />
           <View style={[styles.corner, styles.topRight]} />
           <View style={[styles.corner, styles.bottomLeft]} />
           <View style={[styles.corner, styles.bottomRight]} />
         </View>
 
-        {/* Bottom controls */}
-        <View style={styles.bottomControls}>
-          <TouchableOpacity 
-            style={styles.controlButton}
-            onPress={toggleTorch}
-          >
-            <Text style={styles.controlButtonText}>
-              {torchOn ? '🔦' : '🔦'}
-            </Text>
-            <Text style={styles.controlLabel}>
-              {torchOn ? 'Flash Off' : 'Flash On'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.controlButton}
-            onPress={showBarcodeHelp}
-          >
-            <Text style={styles.controlButtonText}>❓</Text>
-            <Text style={styles.controlLabel}>Help</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.controlButton}
+        <View style={styles.bottomSection}>
+          <TouchableOpacity
+            style={styles.actionBtn}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.controlButtonText}>✖️</Text>
-            <Text style={styles.controlLabel}>Cancel</Text>
+            <Ionicons name="chevron-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: Theme.colors.primary }]}
+            onPress={() => barcodeService.showBarcodeHelp()}
+          >
+            <Ionicons name="help-buoy-outline" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Scanning indicator */}
       {scanned && (
-        <View style={styles.scanningIndicator}>
-          <Text style={styles.scanningText}>Processing...</Text>
+        <View style={styles.statusToast}>
+          <Text style={styles.statusText}>Analyzing payload...</Text>
         </View>
       )}
-
-      {/* Info panel */}
-      <View style={styles.infoPanel}>
-        <Text style={styles.infoText}>
-          Supported: {getSupportedTypes()}
-        </Text>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -245,130 +177,103 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   message: {
-    color: '#FFF',
-    fontSize: 18,
+    color: '#9CA3AF',
+    fontSize: 14,
     textAlign: 'center',
-    marginTop: 100,
-  },
-  button: {
-    backgroundColor: Theme.colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  buttonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginTop: 120,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
   },
   overlay: {
     flex: 1,
     justifyContent: 'space-between',
-    padding: 20,
   },
-  topOverlay: {
+  topSection: {
+    padding: 32,
+    paddingTop: 60,
     alignItems: 'center',
-    marginTop: 60,
   },
   title: {
     color: '#FFF',
     fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: '#FFF',
-    fontSize: 16,
-    opacity: 0.8,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    marginTop: 4,
     textAlign: 'center',
   },
-  scanningFrame: {
-    width: 250,
-    height: 250,
+  focusFrame: {
+    width: 280,
+    height: 280,
     alignSelf: 'center',
-    marginVertical: 40,
   },
   corner: {
     position: 'absolute',
-    width: 20,
-    height: 20,
-    borderColor: Theme.colors.primary,
-    borderWidth: 3,
+    width: 30,
+    height: 30,
+    borderColor: '#3B82F6',
+    borderWidth: 4,
   },
   topLeft: {
     top: 0,
     left: 0,
     borderRightWidth: 0,
     borderBottomWidth: 0,
+    borderTopLeftRadius: 15,
   },
   topRight: {
     top: 0,
     right: 0,
     borderLeftWidth: 0,
     borderBottomWidth: 0,
+    borderTopRightRadius: 15,
   },
   bottomLeft: {
     bottom: 0,
     left: 0,
     borderRightWidth: 0,
     borderTopWidth: 0,
+    borderBottomLeftRadius: 15,
   },
   bottomRight: {
     bottom: 0,
     right: 0,
     borderLeftWidth: 0,
     borderTopWidth: 0,
+    borderBottomRightRadius: 15,
   },
-  bottomControls: {
+  bottomSection: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    paddingBottom: 60,
+    gap: 20,
+  },
+  actionBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  controlButton: {
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 50,
-    minWidth: 80,
-  },
-  controlButtonText: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  controlLabel: {
-    color: '#FFF',
-    fontSize: 12,
-  },
-  scanningIndicator: {
+  statusToast: {
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -75 }, { translateY: -20 }],
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
+    transform: [{ translateX: -80 }, { translateY: -25 }],
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  scanningText: {
+  statusText: {
     color: '#FFF',
-    fontSize: 16,
-  },
-  infoPanel: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    right: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 10,
-    borderRadius: 8,
-  },
-  infoText: {
-    color: '#FFF',
-    fontSize: 12,
-    textAlign: 'center',
-    opacity: 0.8,
+    fontWeight: '700',
   },
 });
 
