@@ -1,5 +1,6 @@
-import ImageResizer from '@bam.tech/react-native-image-resizer';
-import { Platform } from 'react-native';
+import ImageResizer from 'react-native-image-resizer';
+import { Platform, Image } from 'react-native';
+import RNFS from 'react-native-fs';
 
 export interface CompressionOptions {
   maxWidth?: number;
@@ -45,7 +46,7 @@ export class ImageCompressionService {
 
     try {
       console.log('Compressing image for meter reading...');
-      
+
       const compressedImage = await ImageResizer.createResizedImage(
         imageUri,
         defaultOptions.maxWidth || 1920,
@@ -72,7 +73,7 @@ export class ImageCompressionService {
       };
 
       console.log(`Image compressed: ${originalSize} -> ${compressedSize} bytes (${result.compressionRatio}% reduction)`);
-      
+
       return result;
     } catch (error) {
       console.error('Image compression failed:', error);
@@ -113,7 +114,7 @@ export class ImageCompressionService {
     options: CompressionOptions = {}
   ): Promise<CompressionResult[]> {
     const results: CompressionResult[] = [];
-    
+
     for (const uri of imageUris) {
       try {
         const result = await this.compressForMeterReading(uri, options);
@@ -131,7 +132,7 @@ export class ImageCompressionService {
         });
       }
     }
-    
+
     return results;
   }
 
@@ -166,7 +167,7 @@ export class ImageCompressionService {
     try {
       const dimensions = await this.getImageDimensions(imageUri);
       const fileSize = await this.getImageSize(imageUri);
-      
+
       const settings: CompressionOptions = {};
 
       switch (useCase) {
@@ -177,7 +178,7 @@ export class ImageCompressionService {
           settings.quality = fileSize > 5 * 1024 * 1024 ? 75 : 85; // Lower quality for large files
           settings.format = 'JPEG';
           break;
-          
+
         case 'thumbnail':
           // Small size for quick loading
           settings.maxWidth = 200;
@@ -185,7 +186,7 @@ export class ImageCompressionService {
           settings.quality = 70;
           settings.format = 'JPEG';
           break;
-          
+
         case 'avatar':
           // Square format for profile pictures
           const size = Math.min(dimensions.width, dimensions.height, 400);
@@ -194,7 +195,7 @@ export class ImageCompressionService {
           settings.quality = 80;
           settings.format = 'JPEG';
           break;
-          
+
         case 'document':
           // Balanced quality for document images
           settings.maxWidth = Math.min(dimensions.width, 2048);
@@ -295,7 +296,7 @@ export class ImageCompressionService {
   // Get recommended compression settings for device
   getDeviceOptimizedSettings(): CompressionOptions {
     const isLowEndDevice = this.isLowEndDevice();
-    
+
     if (isLowEndDevice) {
       return {
         maxWidth: 1280,
