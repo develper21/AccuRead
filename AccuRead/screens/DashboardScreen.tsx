@@ -71,7 +71,7 @@ const DashboardScreen: React.FC = () => {
       serialCounts[serial] = (serialCounts[serial] || 0) + 1;
     });
 
-    const topMeterSerial = Object.entries(serialCounts).reduce((a, b) => 
+    const topMeterSerial = Object.entries(serialCounts).reduce((a, b) =>
       serialCounts[a[0]] > serialCounts[b[0]] ? a : b, ['', 0])[0];
 
     setStats({
@@ -105,9 +105,9 @@ const DashboardScreen: React.FC = () => {
       } else {
         date.setDate(date.getDate() - i);
       }
-      
+
       labels.push(dateFormat(date));
-      
+
       const dayReadings = readings.filter(reading => {
         const readingDate = new Date(reading.timestamp);
         if (selectedPeriod === 'year') {
@@ -116,7 +116,7 @@ const DashboardScreen: React.FC = () => {
           return readingDate.toDateString() === date.toDateString();
         }
       });
-      
+
       data.push(dayReadings.length);
     }
 
@@ -171,7 +171,7 @@ const DashboardScreen: React.FC = () => {
   const consumptionData = getConsumptionData();
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -253,6 +253,8 @@ const DashboardScreen: React.FC = () => {
             data={consumptionData}
             width={screenWidth - 32}
             height={220}
+            yAxisLabel=""
+            yAxisSuffix=""
             chartConfig={chartConfig}
             style={styles.chart}
           />
