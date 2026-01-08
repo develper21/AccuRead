@@ -1,6 +1,5 @@
-import { Link } from 'expo-router';
+import Link from 'expo-router/link';
 import { StyleSheet } from 'react-native';
-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
@@ -26,4 +25,4 @@ const styles = StyleSheet.create({
     marginTop: 15,
     paddingVertical: 15,
   },
-});
+}); 
