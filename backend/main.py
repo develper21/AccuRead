@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from middleware.rateLimiter import rate_limit_middleware
 import uvicorn
 import os
 from typing import Dict, Any
@@ -21,6 +22,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add Rate Limiting Middleware
+app.middleware("http")(rate_limit_middleware)
 
 # Initialize OCR engine (commented out for now)
 # ocr_engine = OCREngine()
