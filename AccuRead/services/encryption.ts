@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import RNFS from 'react-native-fs';
 
 export interface EncryptionKey {
   id: string;
@@ -16,6 +17,11 @@ export interface EncryptedData {
   keyId: string;
   algorithm: string;
   timestamp: number;
+  metadata?: {
+    timestamp: string;
+    confidence: number;
+    imageUrl: string;
+  };
 }
 
 export class EncryptionService {
@@ -130,7 +136,7 @@ export class EncryptionService {
       });
 
       const jsonString = decrypted.toString(CryptoJS.enc.Utf8);
-      
+
       if (!jsonString) {
         throw new Error('Decryption resulted in empty string');
       }
@@ -147,14 +153,14 @@ export class EncryptionService {
     try {
       const existingKeys = await this.getAllEncryptionKeys();
       existingKeys[key.id] = key;
-      
+
       // Keep only last 50 keys to prevent storage bloat
       const keyIds = Object.keys(existingKeys);
       if (keyIds.length > 50) {
         const oldestKeys = keyIds
           .sort((a, b) => existingKeys[a].createdAt.getTime() - existingKeys[b].createdAt.getTime())
           .slice(0, keyIds.length - 50);
-        
+
         oldestKeys.forEach(keyId => delete existingKeys[keyId]);
       }
 
@@ -197,7 +203,7 @@ export class EncryptionService {
     };
 
     const encrypted = await this.encrypt(sensitiveData, 'meter_reading');
-    
+
     return {
       ...encrypted,
       // Keep non-sensitive data unencrypted for searchability
@@ -257,14 +263,14 @@ export class EncryptionService {
     try {
       // Read file content
       const fileContent = await RNFS.readFile(fileUri, 'base64');
-      
+
       // Encrypt content
       const encryptionData = await this.encrypt(fileContent, 'file');
-      
+
       // Save encrypted file
       const encryptedUri = fileUri.replace('.jpg', '_encrypted.jpg');
       await RNFS.writeFile(encryptedUri, encryptionData.data, 'base64');
-      
+
       return {
         encryptedUri,
         encryptionData
@@ -280,11 +286,11 @@ export class EncryptionService {
     try {
       // Decrypt content
       const decryptedContent = await this.decrypt(encryptionData);
-      
+
       // Save decrypted file
       const decryptedUri = encryptedUri.replace('_encrypted.jpg', '_decrypted.jpg');
       await RNFS.writeFile(decryptedUri, decryptedContent, 'base64');
-      
+
       return decryptedUri;
     } catch (error) {
       console.error('Failed to decrypt file:', error);
@@ -326,7 +332,7 @@ export class EncryptionService {
     try {
       const keys = await this.getAllEncryptionKeys();
       const keyArray = Object.values(keys);
-      
+
       return {
         totalKeys: keyArray.length,
         oldestKey: keyArray.length > 0 ? new Date(Math.min(...keyArray.map(k => k.createdAt.getTime()))) : null,
@@ -350,7 +356,7 @@ export class EncryptionService {
       const testData = { message: 'test', timestamp: Date.now() };
       const encrypted = await this.encrypt(testData, 'test');
       const decrypted = await this.decrypt(encrypted);
-      
+
       return JSON.stringify(testData) === JSON.stringify(decrypted);
     } catch (error) {
       console.error('Encryption test failed:', error);
