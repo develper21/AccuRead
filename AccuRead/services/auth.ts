@@ -16,7 +16,7 @@ export interface AuthState {
 
 class AuthService {
   private static instance: AuthService;
-  
+
   static getInstance(): AuthService {
     if (!AuthService.instance) {
       AuthService.instance = new AuthService();
@@ -37,7 +37,7 @@ class AuthService {
     try {
       const userCredential = await auth().createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
-      
+
       return {
         uid: user.uid,
         email: user.email,
@@ -54,7 +54,7 @@ class AuthService {
     try {
       const userCredential = await auth().signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
-      
+
       return {
         uid: user.uid,
         email: user.email,
@@ -70,15 +70,18 @@ class AuthService {
   async signInWithGoogle(): Promise<User> {
     try {
       await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      
+      const userInfo: any = await GoogleSignin.signIn();
+
       // Create Google credential
-      const googleCredential = auth.GoogleAuthProvider.credential(userInfo.idToken);
-      
+      const idToken = userInfo.idToken || userInfo.data?.idToken;
+      if (!idToken) throw new Error('Google Sign-In failed: No ID Token found');
+
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
       // Sign in with credential
       const userCredential = await auth().signInWithCredential(googleCredential);
       const user = userCredential.user;
-      
+
       return {
         uid: user.uid,
         email: user.email,
@@ -104,7 +107,7 @@ class AuthService {
   getCurrentUser(): User | null {
     const currentUser = auth().currentUser;
     if (!currentUser) return null;
-    
+
     return {
       uid: currentUser.uid,
       email: currentUser.email,
