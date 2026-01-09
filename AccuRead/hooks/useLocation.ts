@@ -1,4 +1,15 @@
-import {useState, useCallback} from 'react';
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
+
+import {useState, useCallback, useEffect} from 'react';
 import {Platform, Alert} from 'react-native';
 import * as Location from 'expo-location';
 
@@ -21,20 +32,61 @@ export const useLocation = (): UseLocationReturn => {
   const [errorState, setErrorState] = useState<string | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState(false);
 
+  // Check initial permission status on mount
+  useEffect(() => {
+    const checkInitialPermission = async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        const hasPermission = status === 'granted';
+        setHasLocationPermission(hasPermission);
+      } catch (error) {
+        console.error('Error checking initial permission:', error);
+        setHasLocationPermission(false);
+      }
+    };
+    
+    checkInitialPermission();
+  }, []);
+
   const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      return status === 'granted';
+      
+      // Platform-specific permission handling
+      if (Platform.OS === 'ios') {
+        // iOS may need background location permission for field work
+        const backgroundStatus = await Location.requestBackgroundPermissionsAsync();
+        const hasPermission = status === 'granted' && backgroundStatus.status === 'granted';
+        setHasLocationPermission(hasPermission);
+        return hasPermission;
+      } else {
+        // Android specific handling
+        const hasPermission = status === 'granted';
+        setHasLocationPermission(hasPermission);
+        return hasPermission;
+      }
     } catch (error) {
       console.error('Location permission error:', error);
+      setHasLocationPermission(false);
       return false;
     }
   }, []);
 
   const getCurrentLocation = useCallback(async (): Promise<LocationData | null> => {
     try {
+      // Platform-specific accuracy settings
+      const accuracy = Platform.OS === 'ios' 
+        ? Location.Accuracy.BestForNavigation 
+        : Location.Accuracy.High;
+      
       const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy,
+        // Android specific options
+        ...(Platform.OS === 'android' && {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
+        }),
       });
       
       const newLocation = {
@@ -46,12 +98,32 @@ export const useLocation = (): UseLocationReturn => {
     } catch (locationError: any) {
       let errorMessage = 'Failed to get location';
       
-      if (locationError.code === 1) {
-        errorMessage = 'Location permission denied';
-      } else if (locationError.code === 2) {
-        errorMessage = 'Location unavailable';
-      } else if (locationError.code === 3) {
-        errorMessage = 'Location request timeout';
+      // Platform-specific error codes
+      if (Platform.OS === 'ios') {
+        switch (locationError.code) {
+          case 1:
+            errorMessage = 'Location permission denied';
+            break;
+          case 2:
+            errorMessage = 'Location unavailable';
+            break;
+          case 3:
+            errorMessage = 'Location request timeout';
+            break;
+        }
+      } else {
+        // Android error codes
+        switch (locationError.code) {
+          case 1:
+            errorMessage = 'Location permission denied';
+            break;
+          case 2:
+            errorMessage = 'Location services disabled';
+            break;
+          case 3:
+            errorMessage = 'Location request timeout';
+            break;
+        }
       }
       
       setErrorState(errorMessage);
@@ -75,17 +147,29 @@ export const useLocation = (): UseLocationReturn => {
       const currentLocation = await getCurrentLocation();
       
       if (!currentLocation) {
-        // Show alert for manual location permission
+        // Show platform-specific alert for manual location permission
         Alert.alert(
           'Location Required',
-          'Please enable location services for accurate meter reading geotagging.',
+          Platform.OS === 'ios' 
+            ? 'Please enable location services in Settings > Privacy > Location Services for accurate meter reading geotagging.'
+            : 'Please enable location services for accurate meter reading geotagging.',
           [
             {text: 'Cancel', style: 'cancel'},
-            {text: 'Settings', onPress: () => {
-              // In a real app, you would open app settings
-              console.log('Open app settings');
-            }},
+            {
+              text: 'Settings', 
+              onPress: () => {
+                // Platform-specific settings opening
+                if (Platform.OS === 'ios') {
+                  console.log('Open iOS Settings');
+                  // In a real app: Linking.openURL('app-settings:');
+                } else {
+                  console.log('Open Android Settings');
+                  // In a real app: Linking.openSettings();
+                }
+              }
+            },
           ],
+          { cancelable: false }
         );
       }
 
