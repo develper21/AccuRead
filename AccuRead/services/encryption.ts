@@ -1,3 +1,14 @@
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
+
 import CryptoJS from 'crypto-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -48,12 +59,14 @@ export class EncryptionService {
       const storedKey = await AsyncStorage.getItem('encryption_master_key');
       if (storedKey) {
         this.masterKey = storedKey;
+        console.log(`Master key loaded on ${Platform.OS}`);
       } else {
         this.masterKey = this.generateMasterKey();
         await AsyncStorage.setItem('encryption_master_key', this.masterKey);
+        console.log(`New master key generated on ${Platform.OS}`);
       }
     } catch (error) {
-      console.error('Failed to initialize master key:', error);
+      console.error(`Failed to initialize master key on ${Platform.OS}:`, error);
       this.masterKey = this.generateMasterKey();
     }
   }
@@ -261,22 +274,28 @@ export class EncryptionService {
     encryptionData: EncryptedData;
   }> {
     try {
+      // Platform-specific file handling
+      const fileExtension = Platform.OS === 'ios' ? '.jpg' : '.jpg';
+      const encryptedExtension = Platform.OS === 'ios' ? '_encrypted.jpg' : '_encrypted.jpg';
+      
       // Read file content
       const fileContent = await RNFS.readFile(fileUri, 'base64');
 
       // Encrypt content
       const encryptionData = await this.encrypt(fileContent, 'file');
 
-      // Save encrypted file
-      const encryptedUri = fileUri.replace('.jpg', '_encrypted.jpg');
+      // Save encrypted file with platform-specific naming
+      const encryptedUri = fileUri.replace(fileExtension, encryptedExtension);
       await RNFS.writeFile(encryptedUri, encryptionData.data, 'base64');
 
+      console.log(`File encrypted successfully on ${Platform.OS}`);
+      
       return {
         encryptedUri,
         encryptionData
       };
     } catch (error) {
-      console.error('Failed to encrypt file:', error);
+      console.error(`Failed to encrypt file on ${Platform.OS}:`, error);
       throw new Error(`File encryption failed: ${error}`);
     }
   }
@@ -284,16 +303,22 @@ export class EncryptionService {
   // Decrypt file content
   async decryptFile(encryptedUri: string, encryptionData: EncryptedData): Promise<string> {
     try {
+      // Platform-specific file handling
+      const encryptedExtension = Platform.OS === 'ios' ? '_encrypted.jpg' : '_encrypted.jpg';
+      const decryptedExtension = Platform.OS === 'ios' ? '_decrypted.jpg' : '_decrypted.jpg';
+      
       // Decrypt content
       const decryptedContent = await this.decrypt(encryptionData);
 
-      // Save decrypted file
-      const decryptedUri = encryptedUri.replace('_encrypted.jpg', '_decrypted.jpg');
+      // Save decrypted file with platform-specific naming
+      const decryptedUri = encryptedUri.replace(encryptedExtension, decryptedExtension);
       await RNFS.writeFile(decryptedUri, decryptedContent, 'base64');
 
+      console.log(`File decrypted successfully on ${Platform.OS}`);
+      
       return decryptedUri;
     } catch (error) {
-      console.error('Failed to decrypt file:', error);
+      console.error(`Failed to decrypt file on ${Platform.OS}:`, error);
       throw new Error(`File decryption failed: ${error}`);
     }
   }
@@ -357,9 +382,12 @@ export class EncryptionService {
       const encrypted = await this.encrypt(testData, 'test');
       const decrypted = await this.decrypt(encrypted);
 
-      return JSON.stringify(testData) === JSON.stringify(decrypted);
+      const isSuccessful = JSON.stringify(testData) === JSON.stringify(decrypted);
+      console.log(`Encryption test ${isSuccessful ? 'passed' : 'failed'} on ${Platform.OS}`);
+      
+      return isSuccessful;
     } catch (error) {
-      console.error('Encryption test failed:', error);
+      console.error(`Encryption test failed on ${Platform.OS}:`, error);
       return false;
     }
   }
@@ -375,8 +403,9 @@ export class EncryptionService {
       await AsyncStorage.multiRemove(['encryption_master_key', 'encryption_keys']);
       this.masterKey = null;
       await this.initializeMasterKey();
+      console.log(`Encryption reset completed on ${Platform.OS}`);
     } catch (error) {
-      console.error('Failed to reset encryption:', error);
+      console.error(`Failed to reset encryption on ${Platform.OS}:`, error);
     }
   }
 }
