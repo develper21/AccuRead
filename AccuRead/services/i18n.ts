@@ -1,3 +1,14 @@
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
+
 export type Language = 'en' | 'hi' | 'bn' | 'te' | 'mr' | 'ta' | 'gu' | 'pa';
 
 export interface TranslationKeys {
@@ -60,6 +71,11 @@ export interface TranslationKeys {
   sign_up_with_google: string;
   no_account: string;
   have_account: string;
+  sign_in_to_continue: string;
+  sign_up_to_get_started: string;
+  enter_email_to_reset: string;
+  send_reset_email: string;
+  back_to_sign_in: string;
   
   // Dashboard
   analytics: string;
@@ -175,6 +191,11 @@ const translations: Record<Language, TranslationKeys> = {
     sign_up_with_google: 'Sign up with Google',
     no_account: "Don't have an account?",
     have_account: 'Already have an account?',
+    sign_in_to_continue: 'Sign in to continue',
+    sign_up_to_get_started: 'Sign up to get started',
+    enter_email_to_reset: 'Enter your email to receive reset instructions',
+    send_reset_email: 'Send Reset Email',
+    back_to_sign_in: 'Back to Sign In',
     
     // Dashboard
     analytics: 'Analytics',
@@ -289,6 +310,11 @@ const translations: Record<Language, TranslationKeys> = {
     sign_up_with_google: 'Google के साथ साइन अप करें',
     no_account: 'खाता नहीं है?',
     have_account: 'पहले से ही खाता है?',
+    sign_in_to_continue: 'साइन इन करने के लिए',
+    sign_up_to_get_started: 'शुरू करने के लिए साइन अप करें',
+    enter_email_to_reset: 'रीसेट निर्देशन प्राप्त करने के लिए अपना ईमेल दर्ज करें',
+    send_reset_email: 'रीसेट ईमेल भेजें',
+    back_to_sign_in: 'साइन इन पर वापस जाएं',
     
     // Dashboard
     analytics: 'एनालिटिक्स',
@@ -440,6 +466,7 @@ const translations: Record<Language, TranslationKeys> = {
 export class I18nService {
   private static instance: I18nService;
   private currentLanguage: Language = 'en';
+  private listeners: Array<(language: Language) => void> = [];
 
   static getInstance(): I18nService {
     if (!I18nService.instance) {
@@ -448,12 +475,76 @@ export class I18nService {
     return I18nService.instance;
   }
 
+  // Initialize with stored language or device locale
+  async initialize(): Promise<void> {
+    try {
+      // Try to get stored language preference
+      const storedLanguage = await this.getStoredLanguage();
+      if (storedLanguage) {
+        this.currentLanguage = storedLanguage;
+      } else {
+        // Fallback to device locale or English
+        this.currentLanguage = this.getDeviceLanguage() || 'en';
+      }
+    } catch (error) {
+      console.warn('[I18nService] Failed to initialize language:', error);
+      this.currentLanguage = 'en';
+    }
+  }
+
+  // Store language preference
+  private async storeLanguage(language: Language): Promise<void> {
+    try {
+      // In a real app, use AsyncStorage or similar
+      // await AsyncStorage.setItem('@app_language', language);
+      console.log('[I18nService] Language stored:', language);
+    } catch (error) {
+      console.warn('[I18nService] Failed to store language:', error);
+    }
+  }
+
+  // Get stored language
+  private async getStoredLanguage(): Promise<Language | null> {
+    try {
+      // In a real app, use AsyncStorage or similar
+      // const stored = await AsyncStorage.getItem('@app_language');
+      // return stored as Language;
+      return null;
+    } catch (error) {
+      console.warn('[I18nService] Failed to get stored language:', error);
+      return null;
+    }
+  }
+
+  // Get device language (simplified)
+  private getDeviceLanguage(): Language | null {
+    // In a real app, use react-native-localize or similar
+    // For now, return null to use English as default
+    return null;
+  }
+
   setLanguage(language: Language): void {
-    this.currentLanguage = language;
+    if (this.currentLanguage !== language) {
+      this.currentLanguage = language;
+      this.storeLanguage(language);
+      this.notifyListeners();
+    }
   }
 
   getCurrentLanguage(): Language {
     return this.currentLanguage;
+  }
+
+  // Subscribe to language changes
+  subscribe(listener: (language: Language) => void): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => listener(this.currentLanguage));
   }
 
   translate(key: keyof TranslationKeys): string {
