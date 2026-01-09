@@ -1,40 +1,69 @@
-import React, {useEffect} from 'react';
-import {View, StyleSheet, FlatList, Text, TouchableOpacity, Alert} from 'react-native';
-import {MeterReadingResult} from '../types';
-import {useMeterReadings} from '../hooks';
-import {Theme} from '../utils/theme';
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
+
+import React, { useEffect } from 'react';
+import { View, StyleSheet, FlatList, Text, TouchableOpacity, Alert } from 'react-native';
+import { MeterReadingResult } from '../types';
+import { useMeterReadings } from '../hooks';
+import { Theme } from '../utils/theme';
 
 const HistoryScreen: React.FC = () => {
-  const {readings, loading, error, loadReadings, clearAllReadings} = useMeterReadings();
+  const { readings, loading, error, loadReadings, clearAllReadings } = useMeterReadings();
 
   useEffect(() => {
     loadReadings();
   }, [loadReadings]);
 
-  const renderReadingItem = ({item}: {item: MeterReadingResult}) => (
+  const renderReadingItem = ({ item }: { item: MeterReadingResult }) => (
     <View style={styles.readingItem}>
       <View style={styles.readingHeader}>
-        <Text style={styles.readingDate}>
-          {new Date(item.timestamp).toLocaleDateString()}
-        </Text>
-        <Text style={styles.readingTime}>
-          {new Date(item.timestamp).toLocaleTimeString()}
-        </Text>
-      </View>
-      
-      <View style={styles.readingData}>
-        <Text style={styles.readingField}>Serial: {item.data.serialNumber}</Text>
-        <Text style={styles.readingField}>kWh: {item.data.kwh}</Text>
-        <Text style={styles.readingField}>kVAh: {item.data.kvah}</Text>
-        <Text style={styles.readingField}>MD kW: {item.data.maxDemandKw}</Text>
-        <Text style={styles.readingField}>Demand kVA: {item.data.demandKva}</Text>
+        <View>
+          <Text style={styles.readingDate}>
+            {new Date(item.timestamp).toLocaleDateString()}
+          </Text>
+          <Text style={styles.readingTime}>
+            {new Date(item.timestamp).toLocaleTimeString()}
+          </Text>
+        </View>
+        <View style={styles.badgeRow}>
+          <View style={[styles.miniBadge, { backgroundColor: item.isOffline ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)' }]}>
+            <Text style={[styles.miniBadgeText, { color: item.isOffline ? '#60A5FA' : '#10B981' }]}>
+              {item.isOffline ? 'EDGE' : 'CLOUD'}
+            </Text>
+          </View>
+          {item.requiresReview && (
+            <View style={[styles.miniBadge, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
+              <Text style={[styles.miniBadgeText, { color: '#F97316' }]}>HITL</Text>
+            </View>
+          )}
+        </View>
       </View>
 
-      {item.location && (
-        <Text style={styles.locationText}>
-          📍 {item.location.latitude.toFixed(4)}, {item.location.longitude.toFixed(4)}
-        </Text>
-      )}
+      <View style={styles.readingData}>
+        {Object.entries(item.data).map(([key, value]) => (
+          <Text key={key} style={styles.readingField}>
+            <Text style={styles.fieldLabel}>{key.replace(/([A-Z])/g, ' $1').toUpperCase()}: </Text>
+            {value}
+          </Text>
+        ))}
+      </View>
+
+      <View style={styles.itemFooter}>
+        {item.location && (
+          <Text style={styles.locationText}>
+            📍 {item.location.latitude.toFixed(4)}, {item.location.longitude.toFixed(4)}
+          </Text>
+        )}
+        <Text style={styles.tenantLabel}>{item.tenantId?.toUpperCase()}</Text>
+      </View>
     </View>
   );
 
@@ -43,7 +72,7 @@ const HistoryScreen: React.FC = () => {
       'Clear All History',
       'Are you sure you want to delete all meter reading history?',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete All',
           style: 'destructive',
@@ -92,7 +121,7 @@ const HistoryScreen: React.FC = () => {
               <Text style={styles.clearButtonText}>Clear All</Text>
             </TouchableOpacity>
           </View>
-          
+
           <FlatList
             data={readings}
             renderItem={renderReadingItem}
@@ -162,12 +191,45 @@ const styles = StyleSheet.create({
   readingField: {
     fontSize: 14,
     color: Theme.colors.text,
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  fieldLabel: {
+    color: Theme.colors.textSecondary,
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+  },
+  miniBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  miniBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  itemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Theme.spacing.sm,
+    paddingTop: Theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
   },
   locationText: {
     fontSize: 12,
     color: Theme.colors.textSecondary,
     fontStyle: 'italic',
+  },
+  tenantLabel: {
+    fontSize: 10,
+    color: Theme.colors.primary,
+    fontWeight: 'bold',
+    letterSpacing: 1,
   },
   emptyContainer: {
     flex: 1,
