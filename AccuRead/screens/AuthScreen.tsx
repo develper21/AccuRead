@@ -1,3 +1,14 @@
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
+
 import React, { useState } from 'react';
 import {
   View,
@@ -13,6 +24,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { Theme } from '../utils/theme';
+import { useI18n } from '../contexts/I18nContext';
 
 type AuthMode = 'signin' | 'signup' | 'forgot';
 
@@ -21,6 +33,7 @@ const AuthScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { t } = useI18n();
   
   const { 
     loading, 
@@ -34,19 +47,19 @@ const AuthScreen: React.FC = () => {
 
   React.useEffect(() => {
     if (error) {
-      Alert.alert('Error', error);
+      Alert.alert(t('error'), error);
       clearError();
     }
   }, [error, clearError]);
 
   const handleEmailAuth = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('error'), 'Please fill in all fields');
       return;
     }
 
     if (mode === 'signup' && password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t('error'), 'Passwords do not match');
       return;
     }
 
@@ -71,13 +84,13 @@ const AuthScreen: React.FC = () => {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+      Alert.alert(t('error'), 'Please enter your email address');
       return;
     }
 
     try {
       await resetPassword(email);
-      Alert.alert('Success', 'Password reset email sent!');
+      Alert.alert(t('success'), 'Password reset email sent!');
       setMode('signin');
     } catch (error) {
       // Error is already handled by useAuth hook
@@ -89,12 +102,12 @@ const AuthScreen: React.FC = () => {
       case 'signin':
         return (
           <>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
+            <Text style={styles.title}>{t('welcome_back')}</Text>
+            <Text style={styles.subtitle}>{t('sign_in_to_continue')}</Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={t('email')}
               placeholderTextColor={Theme.colors.textSecondary}
               value={email}
               onChangeText={setEmail}
@@ -104,7 +117,7 @@ const AuthScreen: React.FC = () => {
 
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={t('password')}
               placeholderTextColor={Theme.colors.textSecondary}
               value={password}
               onChangeText={setPassword}
@@ -115,7 +128,7 @@ const AuthScreen: React.FC = () => {
               style={styles.forgotButton}
               onPress={() => setMode('forgot')}
             >
-              <Text style={styles.forgotText}>Forgot Password?</Text>
+              <Text style={styles.forgotText}>{t('forgot_password')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -126,7 +139,7 @@ const AuthScreen: React.FC = () => {
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={styles.buttonText}>{t('sign_in')}</Text>
               )}
             </TouchableOpacity>
 
@@ -135,12 +148,12 @@ const AuthScreen: React.FC = () => {
               onPress={handleGoogleSignIn}
               disabled={loading}
             >
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
+              <Text style={styles.googleButtonText}>{t('sign_in_with_google')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setMode('signup')}>
               <Text style={styles.switchText}>
-                Don't have an account? <Text style={styles.switchTextBold}>Sign Up</Text>
+                {t('no_account')} <Text style={styles.switchTextBold}>{t('sign_up')}</Text>
               </Text>
             </TouchableOpacity>
           </>
@@ -149,12 +162,12 @@ const AuthScreen: React.FC = () => {
       case 'signup':
         return (
           <>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Sign up to get started</Text>
+            <Text style={styles.title}>{t('create_account')}</Text>
+            <Text style={styles.subtitle}>{t('sign_up_to_get_started')}</Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={t('email')}
               placeholderTextColor={Theme.colors.textSecondary}
               value={email}
               onChangeText={setEmail}
@@ -164,7 +177,7 @@ const AuthScreen: React.FC = () => {
 
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={t('password')}
               placeholderTextColor={Theme.colors.textSecondary}
               value={password}
               onChangeText={setPassword}
@@ -173,7 +186,7 @@ const AuthScreen: React.FC = () => {
 
             <TextInput
               style={styles.input}
-              placeholder="Confirm Password"
+              placeholder={t('confirm_password')}
               placeholderTextColor={Theme.colors.textSecondary}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -188,7 +201,7 @@ const AuthScreen: React.FC = () => {
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.buttonText}>Sign Up</Text>
+                <Text style={styles.buttonText}>{t('sign_up')}</Text>
               )}
             </TouchableOpacity>
 
@@ -197,12 +210,12 @@ const AuthScreen: React.FC = () => {
               onPress={handleGoogleSignIn}
               disabled={loading}
             >
-              <Text style={styles.googleButtonText}>Sign up with Google</Text>
+              <Text style={styles.googleButtonText}>{t('sign_up_with_google')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setMode('signin')}>
               <Text style={styles.switchText}>
-                Already have an account? <Text style={styles.switchTextBold}>Sign In</Text>
+                {t('have_account')} <Text style={styles.switchTextBold}>{t('sign_in')}</Text>
               </Text>
             </TouchableOpacity>
           </>
@@ -211,12 +224,12 @@ const AuthScreen: React.FC = () => {
       case 'forgot':
         return (
           <>
-            <Text style={styles.title}>Reset Password</Text>
-            <Text style={styles.subtitle}>Enter your email to receive reset instructions</Text>
+            <Text style={styles.title}>{t('reset_password')}</Text>
+            <Text style={styles.subtitle}>{t('enter_email_to_reset')}</Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={t('email')}
               placeholderTextColor={Theme.colors.textSecondary}
               value={email}
               onChangeText={setEmail}
@@ -232,13 +245,13 @@ const AuthScreen: React.FC = () => {
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.buttonText}>Send Reset Email</Text>
+                <Text style={styles.buttonText}>{t('send_reset_email')}</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setMode('signin')}>
               <Text style={styles.switchText}>
-                <Text style={styles.switchTextBold}>Back to Sign In</Text>
+                <Text style={styles.switchTextBold}>{t('back_to_sign_in')}</Text>
               </Text>
             </TouchableOpacity>
           </>
