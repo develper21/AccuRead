@@ -1,5 +1,16 @@
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
+
 import { useState, useEffect, useCallback } from 'react';
-import { authService, User, AuthState } from '../services/auth';
+import { authService, AuthUser, AuthState } from '../services/auth';
 
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
@@ -14,7 +25,7 @@ export const useAuth = () => {
     authService.initializeGoogleSignIn();
 
     // Set up auth state listener
-    const unsubscribe = authService.onAuthStateChanged((user) => {
+    const unsubscribe = authService.onAuthStateChanged((user: AuthUser | null) => {
       setAuthState({
         user,
         loading: false,
@@ -27,7 +38,7 @@ export const useAuth = () => {
   }, []);
 
   // Sign Up
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -38,18 +49,19 @@ export const useAuth = () => {
         error: null,
       });
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during sign up';
       setAuthState(prev => ({
         ...prev,
         loading: false,
-        error: error.message,
+        error: errorMessage,
       }));
       throw error;
     }
   }, []);
 
   // Sign In
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -60,18 +72,19 @@ export const useAuth = () => {
         error: null,
       });
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during sign in';
       setAuthState(prev => ({
         ...prev,
         loading: false,
-        error: error.message,
+        error: errorMessage,
       }));
       throw error;
     }
   }, []);
 
   // Sign In with Google
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (): Promise<AuthUser> => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -82,11 +95,12 @@ export const useAuth = () => {
         error: null,
       });
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during Google sign in';
       setAuthState(prev => ({
         ...prev,
         loading: false,
-        error: error.message,
+        error: errorMessage,
       }));
       throw error;
     }
@@ -103,11 +117,12 @@ export const useAuth = () => {
         loading: false,
         error: null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during sign out';
       setAuthState(prev => ({
         ...prev,
         loading: false,
-        error: error.message,
+        error: errorMessage,
       }));
     }
   }, []);
@@ -119,11 +134,12 @@ export const useAuth = () => {
     try {
       await authService.resetPassword(email);
       setAuthState(prev => ({ ...prev, loading: false }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during password reset';
       setAuthState(prev => ({
         ...prev,
         loading: false,
-        error: error.message,
+        error: errorMessage,
       }));
       throw error;
     }
@@ -135,7 +151,9 @@ export const useAuth = () => {
   }, []);
 
   return {
-    ...authState,
+    user: authState.user,
+    loading: authState.loading,
+    error: authState.error,
     signUp,
     signIn,
     signInWithGoogle,
