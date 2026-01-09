@@ -1,3 +1,14 @@
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -46,6 +57,15 @@ const ExportScreen: React.FC = () => {
     }
   };
 
+  const getFilteredReadingsCount = () => {
+    if (!dateRange) return readings.length;
+
+    return readings.filter(reading => {
+      const readingDate = new Date(reading.timestamp);
+      return readingDate >= dateRange.start && readingDate <= dateRange.end;
+    }).length;
+  };
+
   const handleExport = async () => {
     if (readings.length === 0) {
       Alert.alert('No Data', 'No readings available to export');
@@ -61,42 +81,30 @@ const ExportScreen: React.FC = () => {
         includeImages: false,
       };
 
-      let filePath: string;
-
-      switch (selectedFormat) {
-        case 'csv':
-          filePath = await exportService.exportToCSV(readings, options);
-          break;
-        case 'excel':
-          filePath = await exportService.exportToExcel(readings, options);
-          break;
-        case 'pdf':
-          filePath = await exportService.generatePDFReport(readings, options);
-          break;
-        default:
-          throw new Error('Unsupported format');
+      if (Platform.OS === 'ios') {
+        // iOS: Use share sheet for better UX
+        const filePath = await exportService.exportToCSV(readings, options);
+        if (filePath) {
+          Alert.alert('Success', 'Data exported successfully');
+        }
+      } else if (Platform.OS === 'android') {
+        // Android: Direct file download
+        const filePath = await exportService.exportToExcel(readings, options);
+        if (filePath) {
+          Alert.alert('Success', 'Data exported to Downloads');
+        }
+      } else {
+        // Web: Direct download
+        const filePath = await exportService.exportToCSV(readings, options);
+        if (filePath) {
+          Alert.alert('Success', 'Data exported successfully');
+        }
       }
-
-      await exportService.shareFile(filePath, selectedFormat);
-
-      Alert.alert(
-        'Success',
-        `Export completed successfully! File shared via ${selectedFormat.toUpperCase()} format.`
-      );
     } catch (error: any) {
       Alert.alert('Export Failed', error.message);
     } finally {
       setExporting(false);
     }
-  };
-
-  const getFilteredReadingsCount = () => {
-    if (!dateRange) return readings.length;
-
-    return readings.filter(reading => {
-      const readingDate = new Date(reading.timestamp);
-      return readingDate >= dateRange.start && readingDate <= dateRange.end;
-    }).length;
   };
 
   const formats = exportService.getAvailableFormats();
@@ -148,10 +156,12 @@ const ExportScreen: React.FC = () => {
               <Text style={styles.dateRangeText}>
                 {dateRange.start.toLocaleDateString()} - {dateRange.end.toLocaleDateString()}
               </Text>
-              <TouchableOpacity onPress={() => setDateRange(null)}>
-                <Ionicons name="close-circle" size={18} color={Theme.colors.error} />
-              </TouchableOpacity>
             </View>
+          )}
+          {dateRange && (
+            <TouchableOpacity onPress={() => setDateRange(null)}>
+              <Ionicons name="close-circle-outline" size={18} color={Theme.colors.error} />
+            </TouchableOpacity>
           )}
         </View>
 
