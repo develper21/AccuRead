@@ -1,15 +1,40 @@
-import auth from '@react-native-firebase/auth';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+/**
+ * Copyright (c) 2025 develper21
+ * 
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * IMPORTANT: Removal of this header violates the license terms.
+ * This code remains the property of develper21 and is protected
+ * under intellectual property laws.
+ */
 
-export interface User {
+import { initializeApp } from '@react-native-firebase/app';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { UserRole } from '../types';
+import Config from '../config/env';
+
+// Initialize Firebase with environment configuration
+const firebaseConfig = Config.getFirebaseConfig();
+let app: any;
+
+try {
+  app = initializeApp(firebaseConfig);
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+}
+
+export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  role: UserRole; // Integrated roles
 }
 
 export interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   error: string | null;
 }
@@ -26,14 +51,46 @@ class AuthService {
 
   // Initialize Google Sign-In
   initializeGoogleSignIn() {
+    const googleConfig = Config.getGoogleSignInConfig();
     GoogleSignin.configure({
-      webClientId: 'YOUR_WEB_CLIENT_ID', // Replace with your actual web client ID
-      offlineAccess: false,
+      webClientId: googleConfig.webClientId || 'YOUR_WEB_CLIENT_ID',
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+      iosClientId: googleConfig.iosClientId,
     });
   }
 
+  // Check if user is signed in with Google
+  async isSignedInWithGoogle(): Promise<boolean> {
+    try {
+      const isSignedIn = await GoogleSignin.getTokens().then(() => true).catch(() => false);
+      return isSignedIn;
+    } catch (error) {
+      console.error('Error checking Google sign-in status:', error);
+      return false;
+    }
+  }
+
+  // Get current Google user info
+  async getCurrentGoogleUser(): Promise<any> {
+    try {
+      const userInfo = await GoogleSignin.getCurrentUser();
+      return userInfo;
+    } catch (error) {
+      console.error('Error getting current Google user:', error);
+      return null;
+    }
+  }
+
+  // Helper to simulate roles for the demo
+  private async getUserRole(email: string): Promise<UserRole> {
+    if (email?.includes('admin')) return 'ADMIN';
+    if (email?.includes('supervisor')) return 'SUPERVISOR';
+    return 'FIELD_WORKER';
+  }
+
   // Email/Password Sign Up
-  async signUp(email: string, password: string): Promise<User> {
+  async signUp(email: string, password: string): Promise<AuthUser> {
     try {
       const userCredential = await auth().createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
@@ -43,6 +100,7 @@ class AuthService {
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        role: await this.getUserRole(user.email || ''),
       };
     } catch (error: any) {
       throw new Error(this.getErrorMessage(error.code));
@@ -50,7 +108,7 @@ class AuthService {
   }
 
   // Email/Password Sign In
-  async signIn(email: string, password: string): Promise<User> {
+  async signIn(email: string, password: string): Promise<AuthUser> {
     try {
       const userCredential = await auth().signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
@@ -60,6 +118,7 @@ class AuthService {
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        role: await this.getUserRole(user.email || ''),
       };
     } catch (error: any) {
       throw new Error(this.getErrorMessage(error.code));
@@ -67,44 +126,72 @@ class AuthService {
   }
 
   // Google Sign In
-  async signInWithGoogle(): Promise<User> {
+  async signInWithGoogle(): Promise<AuthUser> {
     try {
-      await GoogleSignin.hasPlayServices();
-      const userInfo: any = await GoogleSignin.signIn();
+      // Check if device supports Google Play Services
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+
+      // Sign in with Google
+      const userInfo = await GoogleSignin.signIn();
+      
+      // Get ID token
+      const tokens = await GoogleSignin.getTokens();
+      const idToken = tokens.idToken;
+      if (!idToken) {
+        throw new Error('Google Sign-In failed: No ID Token found');
+      }
 
       // Create Google credential
-      const idToken = userInfo.idToken || userInfo.data?.idToken;
-      if (!idToken) throw new Error('Google Sign-In failed: No ID Token found');
-
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-
-      // Sign in with credential
+      
+      // Sign in to Firebase with Google credential
       const userCredential = await auth().signInWithCredential(googleCredential);
       const user = userCredential.user;
+
+      // Get user role based on email
+      const role = await this.getUserRole(user.email || '');
 
       return {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        role,
       };
     } catch (error: any) {
-      throw new Error(this.getErrorMessage(error.code));
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        throw new Error('Google Sign-In was cancelled');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        throw new Error('Google Sign-In is already in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        throw new Error('Google Play Services not available');
+      } else {
+        throw new Error(this.getErrorMessage(error.code || 'google-signin-failed'));
+      }
     }
   }
 
   // Sign Out
   async signOut(): Promise<void> {
     try {
+      // Sign out from Firebase
       await auth().signOut();
-      await GoogleSignin.signOut();
+      
+      // Sign out from Google if signed in
+      const isGoogleSignedIn = await this.isSignedInWithGoogle();
+      if (isGoogleSignedIn) {
+        await GoogleSignin.signOut();
+      }
     } catch (error: any) {
-      throw new Error('Failed to sign out');
+      console.error('Sign out error:', error);
+      throw new Error('Failed to sign out completely');
     }
   }
 
   // Get Current User
-  getCurrentUser(): User | null {
+  async getCurrentUser(): Promise<AuthUser | null> {
     const currentUser = auth().currentUser;
     if (!currentUser) return null;
 
@@ -113,18 +200,21 @@ class AuthService {
       email: currentUser.email,
       displayName: currentUser.displayName,
       photoURL: currentUser.photoURL,
+      role: await this.getUserRole(currentUser.email || ''),
     };
   }
 
   // Auth State Observer
-  onAuthStateChanged(callback: (user: User | null) => void) {
-    return auth().onAuthStateChanged((user) => {
+  onAuthStateChanged(callback: (user: AuthUser | null) => void) {
+    return auth().onAuthStateChanged(async (user: FirebaseAuthTypes.User | null) => {
       if (user) {
+        const role = await this.getUserRole(user.email || '');
         callback({
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
           photoURL: user.photoURL,
+          role,
         });
       } else {
         callback(null);
@@ -160,6 +250,10 @@ class AuthService {
         return 'Too many failed attempts. Please try again later.';
       case 'auth/network-request-failed':
         return 'Network error. Please check your connection.';
+      case 'google-signin-failed':
+        return 'Google Sign-In failed. Please try again.';
+      case 'google-play-services-not-available':
+        return 'Google Play Services not available on this device.';
       default:
         return 'An error occurred. Please try again.';
     }
