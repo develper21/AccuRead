@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "jest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -23,7 +24,7 @@
     "@react-navigation/stack": "^7.6.13",
     "axios": "^1.13.2",
     "crypto-js": "^4.2.0",
-    "expo": "~54.0.30",
+    "expo": "~54.0.31",
     "expo-av": "^16.0.8",
     "expo-barcode-scanner": "^13.0.1",
     "expo-camera": "^17.0.10",
@@ -63,11 +64,16 @@
     "react-native-worklets-core": "1.6.2"
   },
   "devDependencies": {
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
     "@types/crypto-js": "^4.2.2",
     "@types/invariant": "^2.2.37",
+    "@types/jest": "^30.0.0",
     "@types/react": "~18.2.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "jest": "^30.2.0",
+    "react-test-renderer": "^18.2.0",
     "typescript": "~5.3.3"
   },
   "private": true
