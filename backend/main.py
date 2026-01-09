@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+"""
+Copyright (c) 2025 develper21
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+
+IMPORTANT: Removal of this header violates the license terms.
+This code remains the property of develper21 and is protected
+under intellectual property laws.
+"""
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from middleware.rateLimiter import rate_limit_middleware
@@ -8,16 +20,27 @@ import tempfile
 import shutil
 from datetime import datetime
 
+# Import API routers
+from api.auth import router as auth_router
+from api.meter import router as meter_router
+from api.health import router as health_router
+from api.export import router as export_router
+
+# Import configuration
+from config.settings_simple import settings
+
 app = FastAPI(
-    title="AccuRead API",
+    title=settings.PROJECT_NAME,
     description="AI-powered smart meter OCR system",
-    version="1.0.0"
+    version=settings.VERSION,
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,13 +49,37 @@ app.add_middleware(
 # Add Rate Limiting Middleware
 app.middleware("http")(rate_limit_middleware)
 
+# Include API routers
+app.include_router(
+    auth_router,
+    prefix=f"{settings.API_V1_STR}/auth",
+    tags=["Authentication"]
+)
+
+app.include_router(
+    meter_router,
+    prefix=f"{settings.API_V1_STR}/meter",
+    tags=["Meter Reading"]
+)
+
+app.include_router(
+    export_router,
+    prefix=f"{settings.API_V1_STR}/export",
+    tags=["Data Export"]
+)
+
+app.include_router(
+    health_router,
+    tags=["Health Check"]
+)
+
 # Initialize OCR engine (commented out for now)
 # ocr_engine = OCREngine()
 # image_processor = ImageProcessor()
 
 @app.get("/")
 async def root():
-    return {"message": "AccuRead API is running"}
+    return {"message": "AccuRead API is running", "version": settings.VERSION}
 
 @app.get("/health")
 async def health_check():
@@ -93,4 +140,4 @@ async def mock_extract_meter_reading(image: UploadFile = File(...)) -> Dict[str,
     }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
