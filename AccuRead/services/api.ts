@@ -11,12 +11,12 @@
 
 import axios from 'axios';
 import {MeterReadingResult} from '../types';
-
-const API_BASE_URL = 'http://localhost:8000';
+import Config from '../config/env';
+import { APIErrorHandler } from '../utils/errorHandler';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
+  baseURL: Config.api.baseUrl,
+  timeout: Config.api.timeout,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,8 +39,9 @@ export const meterAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
-      throw new Error('Failed to extract meter reading');
+      const apiError = APIErrorHandler.handleError(error);
+      console.error('API Error:', apiError);
+      throw new Error(APIErrorHandler.getErrorMessage(apiError));
     }
   },
 
@@ -49,8 +50,9 @@ export const meterAPI = {
       const response = await api.post('/mock-extract');
       return response.data;
     } catch (error) {
-      console.error('Mock API Error:', error);
-      throw new Error('Failed to get mock reading');
+      const apiError = APIErrorHandler.handleError(error);
+      console.error('Mock API Error:', apiError);
+      throw new Error(APIErrorHandler.getErrorMessage(apiError));
     }
   },
 
@@ -59,6 +61,13 @@ export const meterAPI = {
       await api.get('/health');
       return true;
     } catch (error) {
+      const apiError = APIErrorHandler.handleError(error);
+      console.error('Health Check Error:', apiError);
+      
+      // Don't throw for health check, just return false
+      if (APIErrorHandler.isNetworkError(apiError)) {
+        console.warn('Backend is not reachable');
+      }
       return false;
     }
   },
