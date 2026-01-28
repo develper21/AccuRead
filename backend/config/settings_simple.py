@@ -30,6 +30,10 @@ class Settings:
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
     REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD")
     
+    # MongoDB Configuration
+    MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017/accuread")
+    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "accuread")
+    
     # JWT Configuration
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your_secret_key_change_in_production")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
@@ -40,9 +44,6 @@ class Settings:
     OCR_MODEL_PATH: str = os.getenv("OCR_MODEL_PATH", "models/ocr")
     OCR_CONFIDENCE_THRESHOLD: float = float(os.getenv("OCR_CONFIDENCE_THRESHOLD", "0.8"))
     GPU_ENABLED: bool = os.getenv("GPU_ENABLED", "true").lower() == "true"
-    
-    # Database Configuration
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./accuread.db")
     
     # CORS Configuration
     ALLOWED_ORIGINS: list = ["*"]  # In production, set specific origins
