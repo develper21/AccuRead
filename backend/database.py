@@ -21,8 +21,8 @@ from redis.asyncio import Redis as AsyncRedis
 from typing import Optional
 import logging
 
-from .config import settings
-from .models import User, MeterReading, ExportJob
+from config.settings_simple import settings
+from models.mongodb_models import User, MeterReading, ExportJob
 
 logger = logging.getLogger(__name__)
 
@@ -98,33 +98,11 @@ class DatabaseManager:
     async def init_indexes(self):
         """Create MongoDB indexes for optimal performance"""
         try:
-            # User indexes
-            await User.create_indexes([
-                "email",
-                "username",
-                "created_at"
-            ])
-            
-            # MeterReading indexes
-            await MeterReading.create_indexes([
-                "user_id",
-                "serial_number",
-                "created_at",
-                "location.coordinates"  # Geospatial index
-            ])
-            
-            # ExportJob indexes
-            await ExportJob.create_indexes([
-                "user_id",
-                "export_id",
-                "status",
-                "created_at"
-            ])
-            
-            logger.info("📊 MongoDB indexes created successfully")
+            # User indexes - Beanie handles this automatically via model settings
+            logger.info("📊 MongoDB indexes configured via model settings")
             
         except Exception as e:
-            logger.error(f"❌ Failed to create indexes: {e}")
+            logger.error(f"❌ Failed to configure indexes: {e}")
             raise
 
 # Global database manager instance
