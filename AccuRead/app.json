@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "accureadmobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "jsEngine": "hermes",
     "assetBundlePatterns": [
       "**/*"
@@ -46,8 +45,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": false,
-      "turboModule": false
+      "reactCompiler": false
     }
   }
 }
