@@ -116,7 +116,7 @@ async def extract_meter_reading(image: UploadFile = File(...)) -> Dict[str, Any]
     }
 
 @app.post("/mock-extract")
-async def mock_extract_meter_reading(image: UploadFile = File(...)) -> Dict[str, Any]:
+async def mock_extract_meter_reading() -> Dict[str, Any]:
     """
     Mock endpoint for testing frontend without actual OCR processing
     """
